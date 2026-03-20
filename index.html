@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>🔥 로또 AI Ultimate</title>
+
+<link rel="manifest" href="manifest.json">
+
+<style>
+body {
+    font-family: Arial;
+    background: #0f172a;
+    color: white;
+    text-align: center;
+    padding: 20px;
+}
+button {
+    padding: 12px 20px;
+    font-size: 16px;
+    margin: 10px;
+    border-radius: 10px;
+    border: none;
+    background: #22c55e;
+}
+.card {
+    background: #1e293b;
+    padding: 15px;
+    margin: 10px auto;
+    width: 300px;
+    border-radius: 12px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🎯 로또 AI Ultimate</h1>
+
+<button onclick="generate()">번호 생성</button>
+
+<div id="status"></div>
+<div id="result"></div>
+
+<script>
+
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js');
+}
+
+async function getDraw(drawNo) {
+    try {
+        let res = await fetch(`https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo=${drawNo}`);
+        let data = await res.json();
+        if (data.returnValue !== "success") return null;
+
+        return [
+            data.drwtNo1, data.drwtNo2, data.drwtNo3,
+            data.drwtNo4, data.drwtNo5, data.drwtNo6
+        ];
+    } catch { return null; }
+}
+
+async function getLatestDraw() {
+    let max = 1100;
+    for (let i=1100;i<1300;i++){
+        let d = await getDraw(i);
+        if (d) max = i;
+        else break;
+    }
+    return max;
+}
+
+async function collectData(){
+    let latest = await getLatestDraw();
+    let draws = [];
+
+    for(let i=latest-49;i<=latest;i++){
+        let d = await getDraw(i);
+        if(d) draws.push(d);
+    }
+    return draws;
+}
+
+function valid(a){
+    let sum=a.reduce((x,y)=>x+y,0);
+    if(sum<100||sum>180)return false;
+
+    let odd=a.filter(x=>x%2).length;
+    if(![2,3,4].includes(odd))return false;
+
+    return true;
+}
+
+function genOne(){
+    while(true){
+        let s=new Set();
+        while(s.size<6) s.add(Math.floor(Math.random()*45)+1);
+        let arr=[...s].sort((a,b)=>a-b);
+        if(valid(arr)) return arr;
+    }
+}
+
+async function generate(){
+    document.getElementById("status").innerText="⏳ 분석중...";
+
+    await collectData();
+
+    let html="";
+    for(let i=0;i<5;i++){
+        html+=`<div class="card">${i+1}: ${genOne().join(", ")}</div>`;
+    }
+
+    document.getElementById("status").innerText="완료!";
+    document.getElementById("result").innerHTML=html;
+}
+
+</script>
+
+</body>
+</html>
